@@ -2,56 +2,55 @@ package com.pizza.pizzashop.controller;
 
 import com.pizza.pizzashop.entity.Pizza;
 import com.pizza.pizzashop.repository.PizzaRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/pizza")
+@RequestMapping("/api/pizzas")
 public class PizzaController {
 
-    private final PizzaRepository pizzaRepository;
+    @Autowired
+    private PizzaRepository pizzaRepository;
 
-    public PizzaController(PizzaRepository pizzaRepository) {
-        this.pizzaRepository = pizzaRepository;
-    }
-
-    // 1️⃣ Add Pizza (POST)
-    @PostMapping
-    public Pizza addPizza(@RequestBody Pizza pizza) {
-        return pizzaRepository.save(pizza);
-    }
-
-    // 2️⃣ Get All Pizzas (GET)
     @GetMapping
     public List<Pizza> getAllPizzas() {
         return pizzaRepository.findAll();
     }
 
-    // 3️⃣ Update Pizza (PUT)
-    @PutMapping("/{id}")
-    public Pizza updatePizza(@PathVariable Long id, @RequestBody Pizza updatedPizza) {
-
-        Pizza pizza = pizzaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pizza not found"));
-
-        pizza.setName(updatedPizza.getName());
-        pizza.setPrice(updatedPizza.getPrice());
-        pizza.setSize(updatedPizza.getSize());
-
+    @PostMapping
+    public Pizza createPizza(@RequestBody Pizza pizza) {
         return pizzaRepository.save(pizza);
     }
 
 
-    // 4️⃣ Delete Pizza
+
+    // 1. Search Pizza by Name
+    @GetMapping("/search")
+    public List<Pizza> searchPizzas(@RequestParam String name) {
+        return pizzaRepository.findByNameContaining(name);
+    }
+
+    // 2. Update Pizza (PUT)
+    @PutMapping("/{id}")
+    public ResponseEntity<Pizza> updatePizza(@PathVariable(value = "id") Long id, @RequestBody Pizza pizzaDetails) {
+        return pizzaRepository.findById(id)
+                .map(pizza -> {
+                    pizza.setName(pizzaDetails.getName());
+                    pizza.setPrice(pizzaDetails.getPrice());
+                    pizza.setDescription(pizzaDetails.getDescription());
+                    Pizza updatedPizza = pizzaRepository.save(pizza);
+                    return ResponseEntity.ok(updatedPizza);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // 3. Delete Pizza (DELETE)
     @DeleteMapping("/{id}")
     public String deletePizza(@PathVariable Long id) {
-
-        if (!pizzaRepository.existsById(id)) {
-            throw new RuntimeException("Pizza not found");
-        }
-
         pizzaRepository.deleteById(id);
-        return "Pizza deleted successfully!";
+        return "Pizza deleted successfully with id: " + id;
     }
 }
